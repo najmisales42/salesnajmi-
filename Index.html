@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Sales Najmi — Daily Sales & Cost Tracker</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#0e0f13;color:#eaeaea}
+header{position:sticky;top:0;background:#12131a;padding:12px 16px;border-bottom:1px solid #1f2230;display:flex;align-items:center;justify-content:space-between}
+h1{font-size:18px;margin:0}
+.tabs{display:flex;overflow:auto;background:#0f1118;border-bottom:1px solid #1f2230}
+.tabs button{flex:1;padding:10px;border:0;background:transparent;color:#cdd3e2}
+.tabs button.active{border-bottom:2px solid #5a9cff;color:#fff}
+main{padding:12px;max-width:1100px;margin:0 auto}
+.card{background:#141722;border:1px solid #1f2230;border-radius:12px;padding:12px;margin:12px 0;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media(max-width:900px){.grid-4{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.grid-3{grid-template-columns:1fr 1fr}.grid-4{grid-template-columns:1fr}.grid-2{grid-template-columns:1fr}}
+label{display:flex;flex-direction:column;font-size:12px;color:#aab3c5;gap:6px}
+input,select,button{font-size:16px;padding:10px;border-radius:10px;border:1px solid #31374a;background:#0f1320;color:#eaeaea}
+button{cursor:pointer}
+button.primary{background:#2a6df4;border-color:#2a6df4;color:#fff}
+button.secondary{background:#1a1f2e;border-color:#29314a}
+button.danger{background:#8b1d1d;border-color:#8b1d1d;color:#fff}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+table{width:100%;border-collapse:collapse;margin-top:8px}
+th,td{border-bottom:1px solid #24293a;padding:10px;text-align:left;font-size:14px}
+.stat{background:#0f1320;border:1px solid #1f2230;border-radius:10px;padding:10px}
+.stat-label{color:#9aa3b8;font-size:12px}
+.stat-value{font-size:20px;margin-top:4px}
+.muted{color:#929ab0}
+footer{padding:16px;text-align:center;color:#8a93a9}
+h3{margin-top:0}
+.no-data{color:#8a93a9;font-style:italic}
+.badge{padding:2px 8px;border-radius:999px;background:#1a1f2e;border:1px solid #29314a;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Sales Najmi — Daily Sales & Cost Tracker</h1>
+</header>
+
+<nav class="tabs">
+  <button data-tab="dashboard" class="active">Dashboard</button>
+  <button data-tab="sales">Sales</button>
+  <button data-tab="expenses">Expenses</button>
+  <button data-tab="products">Products</button>
+  <button data-tab="reports">Reports</button>
+  <button data-tab="settings">Settings</button>
+</nav>
+
+<main>
+  <section id="dashboard" class="tab active">
+    <div class="card">
+      <div class="row">
+        <label for="dashDate">Date</label>
+        <input type="date" id="dashDate">
+        <button id="todayBtn" class="secondary">Today</button>
+      </div>
+      <div class="grid-3">
+        <div class="stat">
+          <div class="stat-label">Sales</div>
+          <div class="stat-value" id="statSales">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">COGS</div>
+          <div class="stat-value" id="statCogs">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Gross Profit</div>
+          <div class="stat-value" id="statGross">0</div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="stat">
+          <div class="stat-label">Expenses</div>
+          <div class="stat-value" id="statExpenses">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Net Profit</div>
+          <div class="stat-value" id="statNet">0</div>
+        </div>
+      </div>
+      <p class="muted">Net Profit = Gross Profit − Expenses.</p>
+      <canvas id="miniChart" height="120"></canvas>
+    </div>
+
+    <div class="card">
+      <h3>Quick Add Sale</h3>
+      <form id="quickSaleForm" class="grid-4">
+        <label>Product
+          <select id="qsProduct"></select>
+        </label>
+        <label>Qty
+          <input type="number" id="qsQty" min="1" step="1" value="1">
+        </label>
+        <label>Selling Price
+          <input type="number" id="qsPrice" min="0" step="0.01" placeholder="auto from product">
+        </label>
+        <label>Date/Time
+          <input type="datetime-local" id="qsDateTime">
+        </label>
+        <button class="primary" type="submit">Add Sale</button>
+      </form>
+    </div>
+  </section>
+
+  <section id="sales" class="tab">
+    <div class="card">
+      <h3>Add Sale</h3>
+      <form id="saleForm" class="grid-4">
+        <label>Date/Time
+          <input type="datetime-local" id="saleDate">
+        </label>
+        <label>Product
+          <select id="saleProduct"></select>
+        </label>
+        <label>Qty
+          <input type="number" id="saleQty" min="1" step="1" value="1">
+        </label>
+        <label>Selling Price (per unit)
+          <input type="number" id="salePrice" min="0" step="0.01" placeholder="auto from product">
+        </label>
+        <label>Cost Override (per unit)
+          <input type="number" id="saleCostOverride" min="0" step="0.01" placeholder="optional">
+        </label>
+        <label>Notes
+          <input type="text" id="saleNotes" placeholder="optional">
+        </label>
+        <button type="submit" class="primary">Save Sale</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h3>Sales List</h3>
+      <div class="row">
+        <input type="date" id="salesFrom">
+        <input type="date" id="salesTo">
+        <button id="salesFilter" class="secondary">Filter</button>
+        <button id="exportSales" class="secondary">Export CSV</button>
+      </div>
+      <table id="salesTable">
+        <thead>
+          <tr>
+            <th>Date</th><th>Product</th><th>Qty</th><th>Sell</th><th>Cost</th><th>Profit</th><th>Notes</th><th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="expenses" class="tab">
+    <div class="card">
+      <h3>Add Expense</h3>
+      <form id="expenseForm" class="grid-4">
+        <label>Date/Time
+          <input type="datetime-local" id="expDate">
+        </label>
+        <label>Category
+          <input type="text" id="expCat" placeholder="e.g., Rent, Fuel, Wages">
+        </label>
+        <label>Amount
+          <input type="number" id="expAmt" min="0" step="0.01">
+        </label>
+        <label>Notes
+          <input type="text" id="expNotes" placeholder="optional">
+        </label>
+        <button type="submit" class="primary">Save Expense</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h3>Expenses List</h3>
+      <div class="row">
+        <input type="date" id="expFrom">
+        <input type="date" id="expTo">
+        <button id="expFilter" class="secondary">Filter</button>
+        <button id="exportExpenses" class="secondary">Export CSV</button>
+      </div>
+      <table id="expensesTable">
+        <thead>
+          <tr>
+            <th>Date</th><th>Category</th><th>Amount</th><th>Notes</th><th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="products" class="tab">
+    <div class="card">
+      <h3>Add / Edit Product</h3>
+      <form id="productForm" class="grid-4">
+        <input type="hidden" id="prodId">
+        <label>Name
+          <input type="text" id="prodName" required>
+        </label>
+        <label>SKU
+          <input type="text" id="prodSku">
+        </label>
+        <label>Category
+          <input type="text" id="prodCat">
+        </label>
+        <label>Cost (per unit)
+          <input type="number" id="prodCost" min="0" step="0.01" required>
+        </label>
+        <label>Default Sell Price
+          <input type="number" id="prodPrice" min="0" step="0.01">
+        </label>
+        <button type="submit" class="primary">Save Product</button>
+        <button type="button" id="resetProductForm" class="secondary">Clear</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h3>Product List</h3>
+      <table id="productsTable">
+        <thead>
+          <tr><th>Name</th><th>SKU</th><th>Cat</th><th>Cost</th><th>Price</th><th></th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="reports" class="tab">
+    <div class="card">
+      <h3>Summary</h3>
+      <div class="row">
+        <input type="date" id="repFrom">
+        <input type="date" id="repTo">
+        <button id="repRun" class="primary">Run</button>
+        <button id="exportAll" class="secondary">Backup (JSON)</button>
+        <input type="file" id="importAll" accept="application/json" hidden>
+        <button id="importAllBtn" class="secondary">Restore</button>
+      </div>
+      <div id="repSummary"></div>
+      <canvas id="repChart" height="200"></canvas>
+    </div>
+  </section>
+
+  <section id="settings" class="tab">
+    <div class="card">
+      <h3>Settings</h3>
+      <div class="grid-3">
+        <label>Currency Symbol
+          <input type="text" id="setCurrency" placeholder="TSh, $, ₹">
+        </label>
+        <label>Business Name
+          <input type="text" id="setBizName" placeholder="Your shop">
+        </label>
+        <label>Data
+          <div class="row">
+            <button id="wipeData" class="danger">Erase All Data</button>
+          </div>
+        </label>
+      </div>
+      <p class="muted">All data is stored privately on this device (localStorage). Use Backup/Restore in Reports to move data between devices.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <small>&copy; <span id="year"></span> Sales Najmi — Single-file edition.</small>
+</footer>
+
+<script>
+const $ = (sel)=>document.querySelector(sel);
+const $$ = (sel)=>document.querySelectorAll(sel);
+
+const DB_KEY = 'hv_sales_tracker_v1';
+const defaultState = { settings:{currency:'TSh', bizName:'Sales Najmi'}, products:[], sales:[], expenses:[] };
+let state = loadState();
+
+function loadState(){ try{ const raw = localStorage.getItem(DB_KEY); return raw ? JSON.parse(raw) : structuredClone(defaultState);}catch(e){ return structuredClone(defaultState);} }
+function saveState(){ localStorage.setItem(DB_KEY, JSON.stringify(state)); refreshAll(); }
+function fmt(n){ const cur = state.settings.currency || ''; if(n===undefined||isNaN(n)) return cur+' 0'; return cur+' '+Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function todayStr(){ const d=new Date(); return d.toISOString().slice(0,10); }
+function nowLocalDatetime(){ const d=new Date(); const off=d.getTimezoneOffset(); return new Date(d - off*60000).toISOString().slice(0,16); }
+
+$$('.tabs button').forEach(btn=>btn.addEventListener('click',()=>{ $$('.tabs button').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); const t=btn.dataset.tab; $$('main .tab').forEach(s=>s.classList.remove('active')); $('#'+t).classList.add('active'); }));
+$('#year').textContent = new Date().getFullYear();
+
+function initSettings(){
+  $('#setCurrency').value = state.settings.currency || '';
+  $('#setBizName').value = state.settings.bizName || '';
+  $('#setCurrency').addEventListener('input', e=>{ state.settings.currency = e.target.value || ''; saveState(); });
+  $('#setBizName').addEventListener('input', e=>{ state.settings.bizName = e.target.value || ''; document.title = (state.settings.bizName? state.settings.bizName + ' — ' : '') + 'Sales Najmi'; saveState(); });
+  $('#wipeData').addEventListener('click', ()=>{ if(confirm('Erase ALL data?')){ state = structuredClone(defaultState); saveState(); alert('All data erased.'); } });
+}
+
+function renderProducts(){
+  const tbody=$('#productsTable tbody'); tbody.innerHTML='';
+  if(state.products.length===0){
+    const tr=document.createElement('tr'); const td=document.createElement('td'); td.colSpan=6; td.innerHTML='<span class="no-data">No products yet. Add your first above.</span>'; tr.appendChild(td); tbody.appendChild(tr);
+  }else{
+    state.products.forEach(p=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML = `<td>${p.name}</td><td>${p.sku||''}</td><td>${p.cat||''}</td>
+      <td>${fmt(p.cost)}</td><td>${p.price?fmt(p.price):'-'}</td>
+      <td><button data-id="${p.id}" class="secondary editProd">Edit</button>
+          <button data-id="${p.id}" class="danger delProd">Delete</button></td>`;
+      tbody.appendChild(tr);
+    });
+  }
+  const opts = state.products.map(p=>`<option value="${p.id}" data-cost="${p.cost}" data-price="${p.price||''}">${p.name}${p.sku? ' ('+p.sku+')':''}</option>`).join('');
+  $('#saleProduct').innerHTML = '<option value="">Select…</option>'+opts;
+  $('#qsProduct').innerHTML = '<option value="">Select…</option>'+opts;
+
+  $$('.editProd').forEach(b=>b.onclick=()=>{
+    const p=state.products.find(x=>x.id===b.dataset.id); if(!p) return;
+    $('#prodId').value=p.id; $('#prodName').value=p.name; $('#prodSku').value=p.sku||''; $('#prodCat').value=p.cat||''; $('#prodCost').value=p.cost; $('#prodPrice').value=p.price||'';
+    $$('.tabs button[data-tab="products"]')[0].click();
+  });
+  $$('.delProd').forEach(b=>b.onclick=()=>{ if(!confirm('Delete this product?')) return; state.products = state.products.filter(x=>x.id!==b.dataset.id); saveState(); });
+}
+
+function initProductForm(){
+  $('#resetProductForm').onclick=()=>{ $('#productForm').reset(); $('#prodId').value=''; };
+  $('#productForm').addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const id = $('#prodId').value || (crypto.randomUUID? crypto.randomUUID() : String(Date.now()));
+    const p = { id, name:$('#prodName').value.trim(), sku:$('#prodSku').value.trim(), cat:$('#prodCat').value.trim(), cost:parseFloat($('#prodCost').value||0), price:$('#prodPrice').value?parseFloat($('#prodPrice').value):null };
+    if(!p.name || isNaN(p.cost)){ alert('Name and Cost are required.'); return; }
+    const idx=state.products.findIndex(x=>x.id===id); if(idx>=0) state.products[idx]=p; else state.products.push(p);
+    $('#productForm').reset(); $('#prodId').value=''; saveState();
+  });
+}
+
+function renderSales(from=null,to=null){
+  const tbody=$('#salesTable tbody'); tbody.innerHTML='';
+  let rows=state.sales.slice().sort((a,b)=>a.date.localeCompare(b.date));
+  if(from) rows=rows.filter(r=>r.date.slice(0,10)>=from);
+  if(to) rows=rows.filter(r=>r.date.slice(0,10)<=to);
+  if(rows.length===0){ const tr=document.createElement('tr'); const td=document.createElement('td'); td.colSpan=8; td.innerHTML='<span class="no-data">No sales in range.</span>'; tr.appendChild(td); tbody.appendChild(tr); }
+  else{
+    rows.forEach(s=>{
+      const prod=state.products.find(p=>p.id===s.productId);
+      const name=prod?prod.name:'Unknown';
+      const costUnit=(s.costOverride!=null? s.costOverride : (prod? prod.cost:0));
+      const revenue=s.qty*s.price, cogs=s.qty*costUnit, profit=revenue-cogs;
+      const tr=document.createElement('tr');
+      tr.innerHTML = `<td>${s.date.replace('T',' ')}</td><td>${name}</td><td>${s.qty}</td><td>${fmt(s.price)}</td><td>${fmt(costUnit)}</td><td>${fmt(profit)}</td><td>${s.notes||''}</td>
+      <td><button class="secondary editSale" data-id="${s.id}">Edit</button>
+      <button class="danger delSale" data-id="${s.id}">Delete</button></td>`;
+      tbody.appendChild(tr);
+    });
+  }
+  $$('.editSale').forEach(b=>b.onclick=()=>{
+    const s=state.sales.find(x=>x.id===b.dataset.id); if(!s) return;
+    $('#saleDate').value=s.date; $('#saleProduct').value=s.productId; $('#saleQty').value=s.qty; $('#salePrice').value=s.price; $('#saleCostOverride').value=(s.costOverride!=null? s.costOverride:''); $('#saleNotes').value=s.notes||'';
+    state.sales = state.sales.filter(x=>x.id!==s.id); saveState(); $$('.tabs button[data-tab="sales"]')[0].click();
+  });
+  $$('.delSale').forEach(b=>b.onclick=()=>{ if(!confirm('Delete this sale?')) return; state.sales = state.sales.filter(x=>x.id!==b.dataset.id); saveState(); });
+}
+
+function initSalesForms(){
+  $('#saleDate').value=nowLocalDatetime();
+  $('#saleProduct').addEventListener('change', e=>{ const opt=e.target.selectedOptions[0]; if(opt && opt.dataset.price){ if(!$('#salePrice').value) $('#salePrice').value=opt.dataset.price; } });
+  $('#saleForm').addEventListener('submit',(e)=>{
+    e.preventDefault();
+    const productId=$('#saleProduct').value; if(!productId){ alert('Select a product'); return; }
+    const qty=parseInt($('#saleQty').value||'1',10); const price=parseFloat($('#salePrice').value||'0');
+    const costOv=$('#saleCostOverride').value? parseFloat($('#saleCostOverride').value) : null;
+    const date=$('#saleDate').value || nowLocalDatetime(); const notes=$('#saleNotes').value.trim();
+    if(isNaN(qty)||isNaN(price)){ alert('Qty and Price needed'); return; }
+    state.sales.push({id:(crypto.randomUUID? crypto.randomUUID(): String(Date.now())), date, productId, qty, price, costOverride:costOv, notes});
+    saveState(); $('#saleQty').value=1; $('#saleNotes').value='';
+  });
+
+  $('#qsDateTime').value = nowLocalDatetime();
+  $('#qsProduct').addEventListener('change', e=>{ const opt=e.target.selectedOptions[0]; if(opt && opt.dataset.price){ if(!$('#qsPrice').value) $('#qsPrice').value=opt.dataset.price; } });
+  $('#quickSaleForm').addEventListener('submit',(e)=>{
+    e.preventDefault();
+    const productId=$('#qsProduct').value; if(!productId){ alert('Select a product'); return; }
+    const qty=parseInt($('#qsQty').value||'1',10); const price=parseFloat($('#qsPrice').value||'0');
+    const date=$('#qsDateTime').value || nowLocalDatetime();
+    state.sales.push({id:(crypto.randomUUID? crypto.randomUUID(): String(Date.now())), date, productId, qty, price, costOverride:null, notes:'Quick Add'});
+    saveState(); $('#qsQty').value=1;
+  });
+
+  $('#salesFilter').onclick=()=> renderSales($('#salesFrom').value||null, $('#salesTo').value||null);
+  $('#exportSales').onclick=()=>{
+    const rows=[['Date','Product','Qty','SellPrice','CostPerUnit','Revenue','COGS','Profit','Notes']];
+    state.sales.forEach(s=>{
+      const prod=state.products.find(p=>p.id===s.productId);
+      const costUnit=(s.costOverride!=null? s.costOverride : (prod? prod.cost:0));
+      const revenue=s.qty*s.price, cogs=s.qty*costUnit, profit=revenue-cogs;
+      rows.push([s.date, prod?prod.name:'', s.qty, s.price, costUnit, revenue, cogs, profit, s.notes||'']);
+    });
+    downloadCSV('sales.csv', rows);
+  };
+}
+
+function downloadCSV(filename, rows){
+  const csv = rows.map(r=>r.map(v=>`"${String(v).replaceAll('"','""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; a.click(); URL.revokeObjectURL(url);
+}
+
+function renderExpenses(from=null,to=null){
+  const tbody=$('#expensesTable tbody'); tbody.innerHTML='';
+  let rows=state.expenses.slice().sort((a,b)=>a.date.localeCompare(b.date));
+  if(from) rows=rows.filter(r=>r.date.slice(0,10)>=from);
+  if(to) rows=rows.filter(r=>r.date.slice(0,10)<=to);
+  if(rows.length===0){ const tr=document.createElement('tr'); const td=document.createElement('td'); td.colSpan=5; td.innerHTML='<span class="no-data">No expenses in range.</span>'; tr.appendChild(td); tbody.appendChild(tr); }
+  else{
+    rows.forEach(x=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML = `<td>${x.date.replace('T',' ')}</td><td>${x.cat}</td><td>${fmt(x.amt)}</td><td>${x.notes||''}</td>
+      <td><button class="secondary editExp" data-id="${x.id}">Edit</button>
+      <button class="danger delExp" data-id="${x.id}">Delete</button></td>`;
+      tbody.appendChild(tr);
+    });
+  }
+  $$('.editExp').forEach(b=>b.onclick=()=>{
+    const e=state.expenses.find(x=>x.id===b.dataset.id); if(!e) return;
+    $('#expDate').value=e.date; $('#expCat').value=e.cat; $('#expAmt').value=e.amt; $('#expNotes').value=e.notes||'';
+    state.expenses = state.expenses.filter(x=>x.id!==e.id); saveState(); $$('.tabs button[data-tab="expenses"]')[0].click();
+  });
+  $$('.delExp').forEach(b=>b.onclick=()=>{ if(!confirm('Delete this expense?')) return; state.expenses = state.expenses.filter(x=>x.id!==b.dataset.id); saveState(); });
+}
+function initExpenseForm(){
+  $('#expDate').value=nowLocalDatetime();
+  $('#expenseForm').addEventListener('submit',(e)=>{
+    e.preventDefault();
+    const date=$('#expDate').value||nowLocalDatetime(); const cat=$('#expCat').value.trim(); const amt=parseFloat($('#expAmt').value||'0'); const notes=$('#expNotes').value.trim();
+    if(!cat || isNaN(amt)){ alert('Category and Amount required'); return; }
+    state.expenses.push({id:(crypto.randomUUID? crypto.randomUUID(): String(Date.now())), date, cat, amt, notes}); saveState(); $('#expCat').value=''; $('#expAmt').value='';
+  });
+  $('#expFilter').onclick=()=> renderExpenses($('#expFrom').value||null, $('#expTo').value||null);
+  $('#exportExpenses').onclick=()=>{
+    const rows=[['Date','Category','Amount','Notes']];
+    state.expenses.forEach(x=> rows.push([x.date,x.cat,x.amt,x.notes||'']));
+    downloadCSV('expenses.csv', rows);
+  }
+}
+
+function calcDay(dateStr){
+  const sales=state.sales.filter(s=>s.date.slice(0,10)===dateStr);
+  const exps=state.expenses.filter(e=>e.date.slice(0,10)===dateStr);
+  let revenue=0,cogs=0,expenses=0;
+  sales.forEach(s=>{
+    const prod=state.products.find(p=>p.id===s.productId);
+    const costUnit=(s.costOverride!=null? s.costOverride : (prod? prod.cost:0));
+    revenue += s.qty*s.price; cogs += s.qty*costUnit;
+  });
+  exps.forEach(e=> expenses += e.amt);
+  const gross=revenue-cogs; const net=gross-expenses;
+  return {revenue,cogs,gross,expenses,net};
+}
+
+function renderDashboard(){
+  const d=$('#dashDate').value || todayStr();
+  const {revenue,cogs,gross,expenses,net} = calcDay(d);
+  $('#statSales').textContent=fmt(revenue);
+  $('#statCogs').textContent=fmt(cogs);
+  $('#statGross').textContent=fmt(gross);
+  $('#statExpenses').textContent=fmt(expenses);
+  $('#statNet').textContent=fmt(net);
+  drawMiniChart();
+}
+
+$('#dashDate').value = todayStr();
+$('#todayBtn').onclick = ()=>{ $('#dashDate').value = todayStr(); renderDashboard(); }
+$('#dashDate').addEventListener('change', renderDashboard);
+
+function rangeDays(from,to){ const days=[]; const d1=new Date(from); const d2=new Date(to); for(let d=new Date(d1); d<=d2; d.setDate(d.getDate()+1)){ days.push(d.toISOString().slice(0,10)); } return days; }
+
+function runReport(){
+  const from=$('#repFrom').value || todayStr(); const to=$('#repTo').value || from;
+  const days = rangeDays(from,to);
+  let totR=0,totC=0,totE=0; const series=[];
+  days.forEach(ds=>{ const {revenue,cogs,gross,expenses,net}=calcDay(ds); totR+=revenue; totC+=cogs; totE+=expenses; series.push({date:ds,revenue,cogs,expenses,net}); });
+  const gross=totR-totC; const net=gross-totE;
+  $('#repSummary').innerHTML = `
+    <div class="grid-4">
+      <div class="stat"><div class="stat-label">Total Sales</div><div class="stat-value">${fmt(totR)}</div></div>
+      <div class="stat"><div class="stat-label">Total COGS</div><div class="stat-value">${fmt(totC)}</div></div>
+      <div class="stat"><div class="stat-label">Gross Profit</div><div class="stat-value">${fmt(gross)}</div></div>
+      <div class="stat"><div class="stat-label">Net Profit</div><div class="stat-value">${fmt(net)}</div></div>
+    </div>`;
+  drawReportChart(series);
+}
+$('#repRun').onclick = runReport;
+
+function drawMiniChart(){
+  const ctx=$('#miniChart').getContext('2d');
+  const w=ctx.canvas.width = ctx.canvas.clientWidth; const h=ctx.canvas.height = ctx.canvas.clientHeight;
+  ctx.clearRect(0,0,w,h);
+  const to=new Date(); const from=new Date(to); from.setDate(to.getDate()-6);
+  const days=rangeDays(from.toISOString().slice(0,10), to.toISOString().slice(0,10));
+  const vals=days.map(d=>calcDay(d).net);
+  const max=Math.max(1, ...vals.map(v=>Math.abs(v)));
+  ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.beginPath(); ctx.moveTo(0,h-20); ctx.lineTo(w,h-20); ctx.stroke();
+  ctx.beginPath();
+  vals.forEach((v,i)=>{ const x=(i/(vals.length-1))*(w-10)+5; const y=h-20 - (v/max)*(h-40)/2 - (h-40)/2; if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); });
+  ctx.strokeStyle='#5a9cff'; ctx.lineWidth=2; ctx.stroke();
+}
+
+function drawReportChart(series){
+  const ctx=$('#repChart').getContext('2d');
+  const w=ctx.canvas.width = ctx.canvas.clientWidth; const h=ctx.canvas.height = ctx.canvas.clientHeight;
+  ctx.clearRect(0,0,w,h); if(series.length===0) return;
+  const max=Math.max(...series.map(s=>Math.max(s.revenue,s.expenses,s.net)),1); const pad=30;
+  ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(pad,h-pad); ctx.lineTo(w-pad,h-pad); ctx.moveTo(pad,pad); ctx.lineTo(pad,h-pad); ctx.stroke();
+  const x=i=> pad + i*(w-2*pad)/(series.length-1);
+  const y=v=> h-pad - (v/max)*(h-2*pad);
+  function plot(arr){ ctx.beginPath(); arr.forEach((v,i)=>{ if(i===0) ctx.moveTo(x(i),y(v)); else ctx.lineTo(x(i),y(v)); }); ctx.stroke(); }
+  ctx.strokeStyle='#5a9cff'; ctx.lineWidth=2; plot(series.map(s=>s.revenue));
+  ctx.strokeStyle='#e79e3a'; ctx.lineWidth=2; plot(series.map(s=>s.expenses));
+  ctx.strokeStyle='#4caf50'; ctx.lineWidth=2; plot(series.map(s=>s.net));
+  ctx.fillStyle='#cdd3e2'; ctx.font='12px system-ui';
+  series.forEach((s,i)=>{ ctx.fillText(s.date.slice(5), x(i)-10, h-8); });
+  ctx.fillText('0', 5, h-30);
+}
+
+$('#exportAll').onclick = ()=>{ const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='sales-tracker-backup.json'; a.click(); URL.revokeObjectURL(url); };
+$('#importAllBtn').onclick = ()=> $('#importAll').click();
+$('#importAll').addEventListener('change',(e)=>{
+  const file=e.target.files[0]; if(!file) return;
+  const fr=new FileReader(); fr.onload=()=>{ try{ const obj=JSON.parse(fr.result); if(!obj.settings||!obj.products||!obj.sales||!obj.expenses) throw new Error('Invalid'); state=obj; saveState(); alert('Restore complete.'); }catch(err){ alert('Invalid JSON backup'); } };
+  fr.readAsText(file);
+});
+
+$('#salesFrom').value = todayStr(); $('#salesTo').value = todayStr();
+$('#expFrom').value = todayStr(); $('#expTo').value = todayStr();
+
+function refreshAll(){ initSettings(); renderProducts(); renderSales($('#salesFrom').value||null,$('#salesTo').value||null); renderExpenses($('#expFrom').value||null,$('#expTo').value||null); renderDashboard(); }
+refreshAll();
+</script>
+</body>
+</html>
